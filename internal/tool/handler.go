@@ -2,6 +2,7 @@ package tool
 
 import (
 	"context"
+	"fmt"
 	"mcp_server/internal/api"
 	"strings"
 
@@ -16,6 +17,33 @@ func NewToolHandler() *ToolHandler {
 
 type ToolHandler struct {
 	APIHandler api.NWSAPI
+}
+
+func (h *ToolHandler) GetCoordinates(ctx context.Context, req *mcp.CallToolRequest, input api.CoordinatesInput) (*mcp.CallToolResult, any, error) {
+	query := strings.TrimSpace(input.Query)
+	if query == "" {
+		return h.MCPTextResult([]string{"Location query is required"}), nil, nil
+	}
+
+	coordinates, err := h.APIHandler.GetCoordinates(ctx, query)
+	if err != nil {
+		return h.MCPTextResult([]string{"Unable to resolve coordinates for this location"}), nil, nil
+	}
+
+	var results []string
+	for _, result := range coordinates.Results {
+		if result.CountryCode != "JP" {
+			continue
+		}
+
+		results = append(results, formatCoordinateResult(result))
+	}
+
+	if len(results) == 0 {
+		return h.MCPTextResult([]string{"No coordinates found for this location in Japan"}), nil, nil
+	}
+
+	return h.MCPTextResult(results), nil, nil
 }
 
 func (h *ToolHandler) GetForecast(ctx context.Context, req *mcp.CallToolRequest, input api.ForecastInput) (*mcp.CallToolResult, any, error) {
@@ -67,4 +95,27 @@ func (h *ToolHandler) MCPTextResult(texts []string) *mcp.CallToolResult {
 	}
 
 	return &mcp.CallToolResult{Content: textContent}
+}
+
+func formatCoordinateResult(result api.GeocodingResult) string {
+	var lines []string
+
+	lines = append(lines, fmt.Sprintf("地点: %s", result.Name))
+	lines = append(lines, fmt.Sprintf("緯度: %.6f", result.Latitude))
+	lines = append(lines, fmt.Sprintf("経度: %.6f", result.Longitude))
+
+	if result.Country != "" {
+		lines = append(lines, fmt.Sprintf("国: %s", result.Country))
+	}
+	if result.Admin1 != "" {
+		lines = append(lines, fmt.Sprintf("都道府県: %s", result.Admin1))
+	}
+	if result.Admin2 != "" {
+		lines = append(lines, fmt.Sprintf("地域2: %s", result.Admin2))
+	}
+	if result.Admin3 != "" {
+		lines = append(lines, fmt.Sprintf("地域3: %s", result.Admin3))
+	}
+
+	return strings.Join(lines, "\n")
 }

@@ -66,6 +66,21 @@ func (api *NWSAPI) GetForecast(ctx context.Context, latitude, longitude float64)
 	return &result, nil
 }
 
+func (api *NWSAPI) GetCoordinates(ctx context.Context, query string) (*GeocodingResponse, error) {
+	requestURL := fmt.Sprintf(
+		"%s/search?name=%s&count=10&language=ja&format=json",
+		strings.TrimRight(api.Config.GeocodingURL, "/"),
+		url.QueryEscape(strings.TrimSpace(query)),
+	)
+
+	var result GeocodingResponse
+	if err := api.doRequest(ctx, requestURL, &result); err != nil {
+		return nil, err
+	}
+
+	return &result, nil
+}
+
 func (api *NWSAPI) GetAlerts(ctx context.Context, state string) (*AlertsResponse, error) {
 	requestURL := fmt.Sprintf("%s/alerts/active/area/%s", strings.TrimRight(api.Config.APIURL, "/"), url.PathEscape(state))
 

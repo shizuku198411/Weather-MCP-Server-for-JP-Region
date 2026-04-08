@@ -1,9 +1,13 @@
 package main
 
-import "mcp_server/internal/server"
+import (
+	"log"
+	"mcp_server/internal/server"
+)
 
 func main() {
-	// run server
 	server := server.NewMCPServer()
-	server.Run()
+	if err := server.Run(); err != nil {
+		log.Fatal(err)
+	}
 }
